@@ -430,11 +430,22 @@
         function addMessage(data) {
             const messageElement = document.createElement('div');
             messageElement.className = 'message';
-            messageElement.innerHTML = `
-                <span class="user">${data.user}</span>
-                <span class="time">${data.time}</span>
-                <div class="text">${data.text}</div>
-            `;
+            const userSpan = document.createElement('span');
+            userSpan.className = 'user';
+            userSpan.textContent = data.user;
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time';
+            timeSpan.textContent = data.time;
+            const textDiv = document.createElement('div');
+            textDiv.className = 'text';
+            if (data.html) {
+                textDiv.innerHTML = data.text;
+            } else {
+                textDiv.textContent = data.text;
+            }
+            messageElement.appendChild(userSpan);
+            messageElement.appendChild(timeSpan);
+            messageElement.appendChild(textDiv);
             chatBox.appendChild(messageElement);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
