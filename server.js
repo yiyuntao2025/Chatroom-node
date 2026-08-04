@@ -32,6 +32,15 @@ const fileIcons = {
     'msi': '⚙️', 'default': '📎'
 };
 
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // 获取本机IP
 function getLocalIP() {
     const interfaces = os.networkInterfaces();
@@ -154,6 +163,7 @@ app.post('/api/kick', (req, res) => {
             io.emit('message', {
                 user: '系统',
                 text: `👢 用户 ${username} 已被管理员踢出`,
+                html: false,
                 time: new Date().toLocaleTimeString()
             });
         }
@@ -162,6 +172,32 @@ app.post('/api/kick', (req, res) => {
     } else {
         res.status(400).json({ success: false, message: '需要用户名' });
     }
+});
+
+// 管理员消息（支持 HTML）
+app.post('/api/admin-message', (req, res) => {
+    let { message, html } = req.body;
+    if (!message || typeof message !== 'string') {
+        return res.status(400).json({ success: false, message: '需要消息内容' });
+    }
+
+    if (html) {
+        io.emit('message', {
+            user: '管理员',
+            text: message,
+            html: true,
+            time: new Date().toLocaleTimeString()
+        });
+    } else {
+        io.emit('message', {
+            user: '管理员',
+            text: escapeHtml(message),
+            html: false,
+            time: new Date().toLocaleTimeString()
+        });
+    }
+
+    res.json({ success: true, message: '管理员消息已发送' });
 });
 
 // 心跳检测端点（防止 Render 休眠）
@@ -236,19 +272,21 @@ io.on('connection', (socket) => {
         console.log('👤 用户加入:', username);
     });
 
-    // 接收文本消息（检查禁言）
+    // 接收文本消息（检查禁言，并对客户端消息转义 HTML）
     socket.on('sendMessage', (message) => {
         const username = users[socket.id];
         if (username && !bannedUsers[username]) {
             io.emit('message', {
                 user: username,
-                text: message,
+                text: escapeHtml(message),
+                html: false,
                 time: new Date().toLocaleTimeString()
             });
         } else if (username && bannedUsers[username]) {
             socket.emit('message', {
                 user: '系统',
                 text: '⛔ 你已被禁言，无法发送消息',
+                html: false,
                 time: new Date().toLocaleTimeString()
             });
         }
