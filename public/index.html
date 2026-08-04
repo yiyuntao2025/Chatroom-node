@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node.js 聊天室 - 支持图片和文件</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Microsoft YaHei', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; 
+            padding: 20px; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+            overflow: hidden; 
+        }
+        .header { 
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); 
+            color: white; 
+            padding: 20px; 
+            text-align: center; 
+        }
+        .header h1 { 
+            font-size: 28px; 
+            margin-bottom: 5px; 
+        }
+        .header p { 
+            opacity: 0.9; 
+            font-size: 14px; 
+        }
+        .ip-info { 
+            padding: 10px 15px; 
+            margin: 12px 15px 0; 
+            background: #f8f9fa; 
+            border-left: 4px solid #2196F3; 
+            border-radius: 6px; 
+            color: #2c3e50; 
+            font-size: 14px; 
+        }
+        
+        #username-input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #ddd; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            margin: 15px; 
+            max-width: 300px; 
+        }
+        
+        .chat-container { 
+            display: flex; 
+            height: 500px; 
+        }
+        .chat-main { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        #chat-box { 
+            flex: 1; 
+            padding: 15px; 
+            overflow-y: auto; 
+            background: #fafafa; 
+            border-bottom: 1px solid #eee; 
+        }
+        .input-area { 
+            padding: 15px; 
+            background: #f9f9f9; 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            flex-wrap: wrap; 
+        }
+        #message-input { 
+            flex: 1; 
+            padding: 12px; 
+            border: 2px solid #ddd; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            min-width: 200px; 
+        }
+        .btn { 
+            padding: 12px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: bold; 
+            transition: all 0.3s; 
+        }
+        .btn-primary { 
+            background: #4CAF50; 
+            color: white; 
+        }
+        .btn-primary:hover { 
+            background: #45a049; 
+            transform: translateY(-2px); 
+        }
+        .btn-secondary { 
+            background: #2196F3; 
+            color: white; 
+        }
+        .btn-secondary:hover { 
+            background: #1976D2; 
+            transform: translateY(-2px); 
+        }
+        .btn-tertiary { 
+            background: #9c27b0; 
+            color: white; 
+        }
+        .btn-tertiary:hover { 
+            background: #7b1fa2; 
+            transform: translateY(-2px); 
+        }
+        
+        .users-sidebar { 
+            width: 250px; 
+            background: #2c3e50; 
+            color: white; 
+            padding: 15px; 
+        }
+        .users-sidebar h3 { 
+            margin-bottom: 15px; 
+            padding-bottom: 10px; 
+            border-bottom: 1px solid #34495e; 
+        }
+        #users-container { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+        }
+        .user-item { 
+            padding: 8px 12px; 
+            background: #34495e; 
+            border-radius: 6px; 
+            font-size: 14px; 
+        }
+        
+        .message { 
+            margin-bottom: 15px; 
+            padding: 12px; 
+            border-radius: 10px; 
+            background: white; 
+            border-left: 4px solid #2196F3; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        }
+        .message .user { 
+            font-weight: bold; 
+            color: #2c3e50; 
+            margin-right: 8px; 
+        }
+        .message .time { 
+            font-size: 12px; 
+            color: #7f8c8d; 
+        }
+        .message .text { 
+            margin-top: 8px; 
+            color: #2c3e50; 
+            line-height: 1.5; 
+        }
+        
+        .image-message img { 
+            max-width: 300px; 
+            max-height: 300px; 
+            border-radius: 8px; 
+            margin-top: 8px; 
+            cursor: pointer; 
+            border: 2px solid #ddd; 
+            transition: transform 0.3s; 
+        }
+        .image-message img:hover { 
+            transform: scale(1.02); 
+            border-color: #2196F3; 
+        }
+        
+        .file-message { 
+            display: flex; 
+            align-items: center; 
+            padding: 12px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            margin-top: 8px; 
+            transition: transform 0.3s; 
+        }
+        .file-message:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+        }
+        .file-icon { 
+            font-size: 24px; 
+            margin-right: 12px; 
+        }
+        .file-details { 
+            flex: 1; 
+        }
+        .file-name { 
+            font-weight: bold; 
+            margin-bottom: 4px; 
+        }
+        .file-size { 
+            font-size: 12px; 
+            opacity: 0.9; 
+        }
+        
+        .modal { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.8); 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 1000; 
+        }
+        .modal-content { 
+            background: white; 
+            padding: 24px; 
+            border-radius: 12px; 
+            max-width: 400px; 
+            width: 90%; 
+            text-align: center; 
+        }
+        .modal-buttons { 
+            display: flex; 
+            gap: 10px; 
+            justify-content: center; 
+            margin-top: 20px; 
+        }
+        .modal-btn { 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 14px; 
+        }
+        .btn-success { 
+            background: #4CAF50; 
+            color: white; 
+        }
+        .btn-danger { 
+            background: #f44336; 
+            color: white; 
+        }
+        
+        @media (max-width: 768px) {
+            .chat-container { 
+                flex-direction: column; 
+                height: auto; 
+            }
+            .users-sidebar { 
+                width: 100%; 
+                order: -1; 
+            }
+            #chat-box { 
+                height: 300px; 
+            }
+            .input-area { 
+                flex-direction: column; 
+            }
+            #message-input { 
+                width: 100%; 
+            }
+            .image-message img { 
+                max-width: 200px; 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Node.js 聊天室</h1>
+            <p>支持文本、图片和文件发送 | 端口: 33333</p>
+        </div>
+        
+        <input type="text" id="username-input" placeholder="请输入昵称加入聊天室..." autocomplete="off">
+        <div id="user-ip-info" class="ip-info">正在获取IP信息...</div>
+        
+        <div class="chat-container">
+            <div class="chat-main">
+                <div id="chat-box"></div>
+                
+                <div class="input-area">
+                    <input type="text" id="message-input" placeholder="输入消息..." autocomplete="off" disabled>
+                    <button id="send-btn" class="btn btn-primary" disabled>发送</button>
+                    
+                    <input type="file" id="image-input" accept="image/*" style="display: none;">
+                    <button id="image-btn" class="btn btn-secondary" disabled>🖼️ 图片</button>
+                    
+                    <input type="file" id="file-input" style="display: none;">
+                    <button id="file-btn" class="btn btn-tertiary" disabled>📎 文件</button>
+                </div>
+            </div>
+            
+            <div class="users-sidebar">
+                <h3>👥 在线用户 (<span id="users-count">0</span>)</h3>
+                <div id="users-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文件信息模态框 -->
+    <div id="file-info-modal" class="modal">
+        <div class="modal-content">
+            <h3>📁 文件信息</h3>
+            <div id="file-info"></div>
+            <div class="modal-buttons">
+                <button id="download-file" class="modal-btn btn-success">下载文件</button>
+                <button id="close-modal" class="modal-btn btn-danger">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const usernameInput = document.getElementById('username-input');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const imageBtn = document.getElementById('image-btn');
+        const imageInput = document.getElementById('image-input');
+        const fileBtn = document.getElementById('file-btn');
+        const fileInput = document.getElementById('file-input');
+        const chatBox = document.getElementById('chat-box');
+        const usersContainer = document.getElementById('users-container');
+        const usersCount = document.getElementById('users-count');
+        const fileInfoModal = document.getElementById('file-info-modal');
+        const fileInfoContent = document.getElementById('file-info');
+        const downloadFileBtn = document.getElementById('download-file');
+        const closeModalBtn = document.getElementById('close-modal');
+        const userIpInfoBox = document.getElementById('user-ip-info');
+
+        let username = '';
+        let currentFileData = null;
+
+        // 加入聊天室
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && usernameInput.value.trim()) {
+                joinChat();
+            }
+        });
+
+        function joinChat() {
+            username = usernameInput.value.trim();
+            socket.emit('join', username);
+            usernameInput.disabled = true;
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            imageBtn.disabled = false;
+            fileBtn.disabled = false;
+            messageInput.focus();
+        }
+
+        // 发送文本消息
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                socket.emit('sendMessage', message);
+                messageInput.value = '';
+            }
+        }
+
+        // 选择图片
+        imageBtn.addEventListener('click', () => imageInput.click());
+        imageInput.addEventListener('change', (e) => handleFileSelect(e, 'image'));
+
+        // 选择文件
+        fileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFileSelect(e, 'file'));
+
+        function handleFileSelect(e, type) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('文件大小不能超过10MB');
+                e.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (type === 'image') {
+                    socket.emit('sendImage', {
+                        filename: file.name,
+                        data: e.target.result.split(',')[1],
+                        type: file.type
+                    });
+                } else {
+                    socket.emit('sendFile', {
+                        filename: file.name,
+                        data: e.target.result.split(',')[1],
+                        type: file.type,
+                        size: file.size
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 接收消息
+        socket.on('message', (data) => {
+            addMessage(data);
+        });
+
+        socket.on('image', (data) => {
+            addImageMessage(data);
+        });
+
+        socket.on('file', (data) => {
+            addFileMessage(data);
+        });
+
+        function addMessage(data) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            const userSpan = document.createElement('span');
+            userSpan.className = 'user';
+            userSpan.textContent = data.user;
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time';
+            timeSpan.textContent = data.time;
+            const textDiv = document.createElement('div');
+            textDiv.className = 'text';
+            if (data.html) {
+                textDiv.innerHTML = data.text;
+            } else {
+                textDiv.textContent = data.text;
+            }
+            messageElement.appendChild(userSpan);
+            messageElement.appendChild(timeSpan);
+            messageElement.appendChild(textDiv);
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addImageMessage(data) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            messageElement.innerHTML = `
+                <span class="user">${data.user}</span>
+                <span class="time">${data.time}</span>
+                <div class="image-message">
+                    <img src="data:${data.type};base64,${data.data}" 
+                         alt="${data.filename}" 
+                         onclick="openImage(this.src)">
+                    <div class="text">${data.filename}</div>
+                </div>
+            `;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addFileMessage(data) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            messageElement.innerHTML = `
+                <span class="user">${data.user}</span>
+                <span class="time">${data.time}</span>
+                <div class="file-message" onclick="showFileInfo('${data.filename}', '${data.type}', ${data.size}, '${data.data}', '${data.icon}')">
+                    <span class="file-icon">${data.icon}</span>
+                    <div class="file-details">
+                        <div class="file-name">${data.filename}</div>
+                        <div class="file-size">${formatFileSize(data.size)}</div>
+                    </div>
+                </div>
+            `;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 图片点击放大
+        window.openImage = function(src) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.9); display: flex; justify-content: center;
+                align-items: center; z-index: 1000; cursor: pointer;
+            `;
+            modal.innerHTML = `
+                <img src="${src}" style="max-width: 90%; max-height: 90%;">
+                <button style="position: absolute; top: 20px; right: 20px; background: red; color: white; border: none; padding: 10px; cursor: pointer;">关闭</button>
+            `;
+            modal.onclick = function(e) {
+                if (e.target.tagName === 'BUTTON' || e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            };
+            document.body.appendChild(modal);
+        };
+
+        // 显示文件信息
+        window.showFileInfo = function(filename, type, size, data, icon) {
+            currentFileData = { filename, type, size, data };
+            fileInfoContent.innerHTML = `
+                <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                    <span style="font-size: 48px; margin-right: 16px;">${icon}</span>
+                    <div>
+                        <h4 style="margin: 0 0 5px 0; color: #333;">${filename}</h4>
+                        <p style="margin: 2px 0; color: #666;">类型: ${type}</p>
+                        <p style="margin: 2px 0; color: #666;">大小: ${formatFileSize(size)}</p>
+                    </div>
+                </div>
+            `;
+            fileInfoModal.style.display = 'flex';
+        };
+
+        // 下载文件
+        downloadFileBtn.addEventListener('click', () => {
+            if (currentFileData) {
+                const link = document.createElement('a');
+                link.href = `data:${currentFileData.type};base64,${currentFileData.data}`;
+                link.download = currentFileData.filename;
+                link.click();
+            }
+        });
+
+        // 关闭模态框
+        closeModalBtn.addEventListener('click', () => {
+            fileInfoModal.style.display = 'none';
+            currentFileData = null;
+        });
+
+        fileInfoModal.addEventListener('click', (e) => {
+            if (e.target === fileInfoModal) {
+                fileInfoModal.style.display = 'none';
+                currentFileData = null;
+            }
+        });
+
+        function updateUserIpInfo(ipInfo) {
+            if (!ipInfo) return;
+            const detail = [ipInfo.ip || '未知', ipInfo.region || '未知', ipInfo.isp || '未知']
+                .filter(Boolean)
+                .join(' · ');
+            userIpInfoBox.textContent = `你的 IP: ${detail}`;
+        }
+
+        socket.on('yourIpInfo', (ipInfo) => {
+            updateUserIpInfo(ipInfo);
+        });
+
+        // 更新在线用户列表
+        socket.on('updateUsers', (users) => {
+            usersContainer.innerHTML = '';
+            users.forEach(user => {
+                const userElement = document.createElement('div');
+                userElement.className = 'user-item';
+                const ipDetail = user.ipInfo ? [user.ipInfo.ip || '未知', user.ipInfo.region || '未知', user.ipInfo.isp || '未知'].filter(Boolean).join(' · ') : (user.ip || '未知');
+                userElement.textContent = `👤 ${user.username} (${ipDetail})`;
+                usersContainer.appendChild(userElement);
+            });
+            usersCount.textContent = users.length;
+        });
+    </script>
+</body>
+</html>
