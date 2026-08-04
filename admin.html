@@ -179,6 +179,17 @@
             </div>
         </div>
         
+        <div class="admin-panel" style="padding: 20px; background: #f7f9fb; border-bottom: 1px solid #dee2e6;">
+            <h2 style="margin-bottom: 15px; color: #2c3e50;">管理员广播</h2>
+            <textarea id="admin-message-input" rows="4" style="width:100%; padding: 12px; border:1px solid #ced4da; border-radius:10px; resize: vertical; font-size:14px;" placeholder="在这里输入管理员消息，可以包含 HTML 标签"></textarea>
+            <div style="margin-top: 12px; display:flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                <label style="color:#2c3e50; display:flex; align-items:center; gap:8px; font-size:14px;">
+                    <input type="checkbox" id="admin-html-enable" style="transform: scale(1.1);"> 允许 HTML
+                </label>
+                <button class="refresh-btn" style="background:#28a745;" onclick="sendAdminMessage()">📣 发送管理员消息</button>
+            </div>
+        </div>
+
         <div class="user-list">
             <button class="refresh-btn" onclick="loadUsers()">🔄 刷新用户列表</button>
             
@@ -312,6 +323,38 @@
                 if (result.success) {
                     alert(`✅ 已踢出 ${username}`);
                     loadUsers();
+                }
+            } catch (error) {
+                alert('❌ 操作失败');
+            }
+        }
+
+        async function sendAdminMessage() {
+            const message = document.getElementById('admin-message-input').value.trim();
+            const html = document.getElementById('admin-html-enable').checked;
+            if (!message) {
+                alert('请输入管理员消息内容');
+                return;
+            }
+
+            const confirmSend = html
+                ? '确定要发送 HTML 管理员消息吗？\n请确保内容安全。'
+                : '确定要发送管理员消息吗？';
+            if (!confirm(confirmSend)) return;
+
+            try {
+                const response = await fetch('/api/admin-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, html })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('✅ 管理员消息已发送');
+                    document.getElementById('admin-message-input').value = '';
+                    document.getElementById('admin-html-enable').checked = false;
+                } else {
+                    alert('❌ 发送失败：' + result.message);
                 }
             } catch (error) {
                 alert('❌ 操作失败');
